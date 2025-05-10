@@ -2,7 +2,7 @@ from service.azure_llm import llm
 
 
 def gerar_relatorio_preparacao_vaga(
-    descricao_vaga: str, perfil_candidato: str, instrucoes_sistema: str = None
+    vaga: str, perfil_candidato: str, instrucoes_sistema: str = None
 ) -> str:
     if not instrucoes_sistema:
         instrucoes_sistema = """
@@ -17,26 +17,20 @@ def gerar_relatorio_preparacao_vaga(
         Formate sua resposta de modo organizado e direto, sem introduções longas.
         """
     try:
-        # Construindo as mensagens para o modelo de linguagem
-        mensagens = [
-            {"role": "system", "content": instrucoes_sistema},
-            {
-                "role": "user",
-                "content": f"Descrição da vaga:\n{descricao_vaga}\n\nPerfil do candidato:\n{perfil_candidato}",
-            },
-        ]
-
-        # Chamando o modelo LLM para gerar o relatório
-        resposta = llm.chat(messages=mensagens)
-
-        if (
-            not resposta
-            or not hasattr(resposta, "message")
-            or not hasattr(resposta.message, "content")
-        ):
-            return "Erro: Não foi possível gerar um relatório devido a um problema de comunicação com o modelo de linguagem."
-
-        return resposta.message.content
+        # Construir prompt concatenando instruções do sistema e conteúdo do usuário
+        prompt = (
+            instrucoes_sistema
+            + f"\nDescrição da vaga:\n{vaga}\nPerfil do candidato:\n{perfil_candidato}"
+        )
+        # Chamando o modelo LLM para gerar o relatório via complete
+        resposta = llm.complete(prompt)
+        # Extrair conteúdo da resposta
+        if hasattr(resposta, "text"):
+            return resposta.text
+        elif hasattr(resposta, "content"):
+            return resposta.content
+        else:
+            return str(resposta)
     except Exception as e:
         import traceback
 

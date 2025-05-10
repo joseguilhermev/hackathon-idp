@@ -136,7 +136,7 @@ def procurar_vagas(
     query = Query(
         query=combined_term,
         options=QueryOptions(
-            locations=["Brasil"],  # Broader location for more results
+            locations=["Brasília/DF"],  # Broader location for more results
             apply_link=True,  # Try to extract apply links
             skip_promoted_jobs=False,  # Include promoted jobs too
             limit=10,  # Increased number of jobs to fetch

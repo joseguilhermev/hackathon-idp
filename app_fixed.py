@@ -33,20 +33,17 @@ def pagina_busca_vagas():
 
     if "dados_candidato" not in st.session_state:
         st.error("Você precisa preencher o formulário primeiro.")
-        if st.button("Voltar ao formulário"):
-            st.session_state.pagina = "cadastro"
-            st.rerun()
-        return
+        st.session_state.pagina = "cadastro"
+        return  # Adicionar este return para interromper a execução
 
     dados = st.session_state.dados_candidato
 
     with st.expander("Dados do candidato"):
         st.json(dados)
 
+    # Ação de busca
     if st.button("Buscar vagas compatíveis"):
         with st.spinner("Buscando vagas... Isso pode demorar alguns minutos."):
-            # Corrigindo o import para a versão atual do LlamaIndex
-
             from tools.procurar_vagas import tool_procurar_vagas
             from service.azure_llm import llm
 
@@ -93,8 +90,6 @@ def pagina_busca_vagas():
                 st.info("Resposta recebida. Processando resultados...")
 
                 if resposta:
-                    st.subheader("Vagas recomendadas")
-
                     # Extrair o texto da resposta de forma mais robusta
                     if hasattr(resposta, "response"):
                         resposta_text = resposta.response
@@ -124,11 +119,6 @@ def pagina_busca_vagas():
                         )
                         # Armazenar no log para debug
                         print(f"Resposta muito curta recebida: {resposta_text}")
-
-                    st.markdown("### Vagas recomendadas:")
-                    st.markdown(
-                        "Clique em uma vaga para gerar o relatório de preparação."
-                    )
 
                     # Melhoria: usar um separador mais robusto para dividir as vagas
                     # Filtrar entradas vazias ou que sejam apenas espaços em branco
@@ -163,136 +153,8 @@ def pagina_busca_vagas():
 
                     # Armazenar vagas válidas na sessão para acesso posterior
                     st.session_state.vagas_validas = vagas_list
-
-                    # Criar uma chave para controlar qual relatório está sendo mostrado
-                    if "relatorio_ativo" not in st.session_state:
-                        st.session_state.relatorio_ativo = None
-
-                    # Criar um dicionário para armazenar relatórios gerados
-                    if "relatorios" not in st.session_state:
-                        st.session_state.relatorios = {}
-
-                    for i, vaga in enumerate(vagas_list):
-                        if not vaga.strip():  # Skip empty strings
-                            continue
-
-                        # Define vaga_id BEFORE using it in the expander
-                        vaga_id = f"vaga_{i}"
-
-                        # Usar um título mais informativo se possível
-                        titulo = f"Vaga {i + 1}"
-                        try:
-                            # Tentar extrair o título da vaga do markdown
-                            linhas = vaga.split("\n")
-                            for linha in linhas[:3]:  # Olhar apenas as primeiras linhas
-                                if linha.strip().startswith("#") or "**" in linha:
-                                    titulo = f"Vaga {i + 1}: {linha.strip('#').strip().replace('*', '')}"
-                                    break
-                        except:
-                            pass
-
-                        # Now vaga_id is defined and can be used in the expander check
-                        with st.expander(
-                            titulo,
-                            expanded=(st.session_state.relatorio_ativo == vaga_id),
-                        ):
-                            st.markdown(vaga)
-
-                            # Verificar se já temos relatório para esta vaga
-                            tem_relatorio = vaga_id in st.session_state.relatorios
-
-                            # Container para ações
-                            action_col1, action_col2 = st.columns([1, 3])
-
-                            with action_col1:
-                                # Botão para gerar relatório - mostrar apenas se não tiver relatório
-                                if not tem_relatorio:
-                                    if st.button(
-                                        "📄 Gerar relatório",
-                                        key=f"btn_{vaga_id}",
-                                        use_container_width=True,
-                                    ):
-                                        # Flag para indicar que devemos mostrar a geração do relatório
-                                        st.session_state.gerando_relatorio = vaga_id
-                                        st.session_state.relatorio_ativo = vaga_id
-                                        # Força rerun uma única vez para iniciar geração
-                                        st.rerun()
-                                else:
-                                    # Botão para mostrar/esconder relatório existente
-                                    mostrar_texto = (
-                                        "📄 Ver relatório"
-                                        if st.session_state.relatorio_ativo != vaga_id
-                                        else "🔄 Atualizar"
-                                    )
-                                    if st.button(
-                                        mostrar_texto,
-                                        key=f"show_{vaga_id}",
-                                        use_container_width=True,
-                                    ):
-                                        st.session_state.relatorio_ativo = vaga_id
-                                        st.rerun()
-
-                            with action_col2:
-                                # Espaço ou outras ações futuras
-                                pass
-
-                            # Verifica se estamos gerando relatório para esta vaga específica
-                            if (
-                                "gerando_relatorio" in st.session_state
-                                and st.session_state.gerando_relatorio == vaga_id
-                            ):
-                                # Mostrar indicador de carregamento
-                                with st.spinner("Gerando relatório..."):
-                                    # Preparar dados para o relatório
-                                    perfil = f"""
-                                    Nome: {dados['nome']}
-                                    Curso: {dados['curso']} ({dados['semestre']})
-                                    Áreas de interesse: {', '.join(dados['areas'])}
-                                    Setores de interesse: {', '.join(dados['setores'])}
-                                    Resumo do currículo:
-                                    {dados['curriculo_texto']}
-                                    Perfil LinkedIn:
-                                    {dados['linkedin_dados']}
-                                    """
-
-                                    try:
-                                        relatorio = gerar_relatorio_preparacao_vaga(
-                                            vaga=vaga,
-                                            perfil_candidato=perfil,
-                                        )
-                                        # Armazenar o relatório gerado
-                                        st.session_state.relatorios[vaga_id] = relatorio
-                                        # Limpar flag de geração
-                                        st.session_state.gerando_relatorio = None
-                                        st.success("Relatório gerado com sucesso!")
-                                    except Exception as e:
-                                        import traceback
-
-                                        st.error(f"Erro ao gerar relatório: {str(e)}")
-                                        st.code(traceback.format_exc())
-                                        # Limpar flag de geração mesmo em caso de erro
-                                        st.session_state.gerando_relatorio = None
-
-                            # Se esta for a vaga ativa e temos um relatório, mostrar o relatório
-                            if (
-                                st.session_state.relatorio_ativo == vaga_id
-                                and vaga_id in st.session_state.relatorios
-                            ):
-                                with st.container():
-                                    st.markdown("### 📁 Relatório de Preparação")
-                                    st.markdown(st.session_state.relatorios[vaga_id])
-
-                                    # Botão para download
-                                    relatorio_bytes = st.session_state.relatorios[
-                                        vaga_id
-                                    ].encode("utf-8")
-                                    st.download_button(
-                                        label="📄 Baixar relatório (.txt)",
-                                        data=relatorio_bytes,
-                                        file_name=f"relatorio_vaga_{i+1}.txt",
-                                        mime="text/plain",
-                                        key=f"download_{vaga_id}",
-                                    )
+                    st.session_state.relatorios = {}
+                    st.session_state.relatorio_ativo = None
 
                 else:
                     st.warning("Nenhuma vaga encontrada que corresponda ao seu perfil.")
@@ -303,24 +165,75 @@ def pagina_busca_vagas():
                 st.error("Detalhes do erro:")
                 st.code(traceback.format_exc())
 
-            # Adicionar botões de ação em uma linha
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Realizar nova busca"):
-                    # Limpar resultados anteriores mas manter dados do candidato
-                    if "vagas_validas" in st.session_state:
-                        st.session_state.vagas_validas = []
-                    if "relatorios" in st.session_state:
-                        st.session_state.relatorios = {}
-                    if "relatorio_ativo" in st.session_state:
-                        st.session_state.relatorio_ativo = None
-                    st.rerun()
-
-            with col2:
-                if st.button("Voltar ao formulário"):
-                    # Retornar à página de cadastro
-                    st.session_state.pagina = "cadastro"
-                    st.rerun()
+    # Exibir resultados se houver vaga
+    if st.session_state.vagas_validas:
+        st.subheader("Vagas recomendadas")
+        st.markdown("Clique em uma vaga para gerar o relatório de preparação.")
+        for i, vaga in enumerate(st.session_state.vagas_validas):
+            vaga_id = f"vaga_{i}"
+            titulo = f"Vaga {i + 1}"
+            try:
+                # Tentar extrair o título da vaga do markdown
+                linhas = vaga.split("\n")
+                for linha in linhas[:3]:  # Olhar apenas as primeiras linhas
+                    if linha.strip().startswith("#") or "**" in linha:
+                        titulo = (
+                            f"Vaga {i + 1}: {linha.strip('#').strip().replace('*', '')}"
+                        )
+                        break
+            except:
+                pass
+            with st.expander(
+                titulo, expanded=(st.session_state.relatorio_ativo == vaga_id)
+            ):
+                st.markdown(vaga)
+                # Botão gerar ou toggle relatório
+                if vaga_id not in st.session_state.relatorios:
+                    if st.button("📄 Gerar relatório", key=f"btn_{vaga_id}"):
+                        perfil = f"""
+                        Nome: {dados['nome']}
+                        Curso: {dados['curso']} ({dados['semestre']})
+                        Áreas de interesse: {', '.join(dados['areas'])}
+                        Setores de interesse: {', '.join(dados['setores'])}
+                        Resumo do currículo:
+                        {dados['curriculo_texto']}
+                        Perfil LinkedIn:
+                        {dados['linkedin_dados']}
+                        """
+                        rel = gerar_relatorio_preparacao_vaga(vaga.strip(), perfil)
+                        st.session_state.relatorios[vaga_id] = rel
+                        st.session_state.relatorio_ativo = vaga_id
+                else:
+                    if st.button("📄 Ver/Ocultar relatório", key=f"toggle_{vaga_id}"):
+                        st.session_state.relatorio_ativo = (
+                            None
+                            if st.session_state.relatorio_ativo == vaga_id
+                            else vaga_id
+                        )
+                # Exibir relatório ativo
+                if st.session_state.relatorio_ativo == vaga_id:
+                    st.success("✅ Relatório gerado com sucesso!")
+                    st.markdown("### 📁 Relatório de Preparação")
+                    st.markdown(st.session_state.relatorios[vaga_id])
+                    st.download_button(
+                        label="📄 Baixar relatório (.txt)",
+                        data=st.session_state.relatorios[vaga_id].encode("utf-8"),
+                        file_name=f"relatorio_vaga_{i+1}.txt",
+                        mime="text/plain",
+                        key=f"download_{vaga_id}",
+                    )
+        # botões de nova busca e voltar
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Realizar nova busca"):
+                st.session_state.vagas_validas = []
+                st.session_state.relatorios = {}
+                st.session_state.relatorio_ativo = None
+                st.experimental_rerun()
+        with col2:
+            if st.button("Voltar ao formulário"):
+                st.session_state.pagina = "cadastro"
+                st.experimental_rerun()
 
 
 def main():
@@ -483,6 +396,7 @@ def main():
                     dados_json = json.dumps(dados, ensure_ascii=False, indent=2)
 
                     # Salva os dados na sessão
+                    st.session_state.dados_candidato = dados
                     st.session_state.dados_candidato = dados
 
                     # Mostra o JSON
