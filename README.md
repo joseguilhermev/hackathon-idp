@@ -1,10 +1,5 @@
 # EstagIA: Conexão Inteligente para Estágios
 
-*Hackathon:* [Nome do Seu Hackathon Aqui]
-*Desafio Abordado:* Desafio 02 - Conexão Inteligente com Estágios
-*Equipe:* [Nomes dos Integrantes da Equipe]
-*Data:* 10 de Maio de 2025
-
 ## 🚀 Sobre o Projeto
 
 O EstagIA é uma plataforma inteligente desenvolvida para auxiliar alunos universitários a encontrarem oportunidades de estágio que sejam verdadeiramente alinhadas com seus perfis acadêmicos, experiências e interesses. A solução visa otimizar o processo de busca e "match" entre estudantes e vagas, utilizando Inteligência Artificial para uma análise profunda e recomendações personalizadas.
