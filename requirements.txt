@@ -1,0 +1,11 @@
+openai==1.76.0
+azure-identity==1.21.0
+azure-cognitiveservices-vision-computervision==0.9.1
+azure-ai-projects==1.0.0b10
+llama-index==0.12.35
+python-dotenv==1.1.0
+python-jobspy==1.1.80
+streamlit==1.45.0
+crewai-tools==0.44.0
+linkedin-jobs-scraper==5.0.2
+llama-index-llms-azure-openai==0.3.2
